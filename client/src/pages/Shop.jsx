@@ -558,7 +558,8 @@ const Shop = () => {
                   transition={{ duration: 0.3 }}
                   className="h-full"
                 >
-                  <ProductCard product={product} compact={false} />
+                  {/* ✅ CHANGED: compact={true} for smaller images */}
+                  <ProductCard product={product} compact={true} />
                 </motion.div>
               ))}
             </div>

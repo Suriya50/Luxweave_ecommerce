@@ -24,22 +24,22 @@ const ProductCard = ({ product, compact = false }) => {
     addToCart(product._id);
   };
 
-  // 🔹 COMPACT (mobile) – small cards for home page
+  // 🔹 SUPER COMPACT MODE – even smaller (for Shop page)
   if (compact) {
     return (
       <motion.div whileHover={{ y: -2 }} className="bg-white rounded-lg shadow-sm hover:shadow-md transition border border-gray-100 overflow-hidden h-full">
         <Link to={`/product/${product._id}`}>
-          <div className="relative">
+          <div className="relative bg-gray-50">
             <img
               src={product.images?.[0] || 'https://via.placeholder.com/200'}
               alt={product.name}
-              className="w-full h-28 sm:h-36 object-cover"
+              className="w-full h-28 sm:h-36 object-cover group-hover:scale-105 transition duration-300"
             />
             <button
               onClick={handleWishlist}
-              className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow-sm"
+              className="absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm"
             >
-              <FiHeart className={liked ? 'fill-red-500 text-red-500' : 'text-gray-500'} size={11} />
+              <FiHeart className={liked ? 'fill-red-500 text-red-500' : 'text-gray-500'} size={12} />
             </button>
             {product.discount && (
               <span className="absolute bottom-1 left-1 bg-red-500 text-white text-[7px] px-1 py-0.5 rounded">
@@ -47,20 +47,20 @@ const ProductCard = ({ product, compact = false }) => {
               </span>
             )}
           </div>
-          <div className="p-1">
-            <h3 className="font-semibold text-[9px] truncate leading-tight">{product.name}</h3>
-            <p className="text-gray-500 text-[7px] truncate">{product.category?.name || ''}</p>
+          <div className="p-1.5 sm:p-2">
+            <h3 className="font-semibold text-[8px] sm:text-xs truncate leading-tight">{product.name}</h3>
+            <p className="text-gray-500 text-[6px] sm:text-[8px] truncate">{product.category?.name || ''}</p>
             <div className="flex items-center justify-between mt-0.5">
-              <span className="text-xs font-bold gold-text">₹{product.price}</span>
+              <span className="text-[10px] sm:text-sm font-bold gold-text">₹{product.price}</span>
               {product.oldPrice && (
-                <span className="text-gray-400 line-through text-[7px]">₹{product.oldPrice}</span>
+                <span className="text-gray-400 line-through text-[6px] sm:text-[8px]">₹{product.oldPrice}</span>
               )}
             </div>
             <button
               onClick={handleAddToCart}
-              className="mt-1 w-full bg-gold-500 text-white text-[8px] py-0.5 rounded hover:bg-gold-600 transition flex items-center justify-center gap-0.5"
+              className="mt-1 w-full bg-gold-500 text-white text-[7px] sm:text-[10px] py-0.5 rounded hover:bg-gold-600 transition flex items-center justify-center gap-0.5 font-medium"
             >
-              <FiShoppingBag size={9} /> Add
+              <FiShoppingBag size={10} /> Add
             </button>
           </div>
         </Link>
@@ -68,21 +68,21 @@ const ProductCard = ({ product, compact = false }) => {
     );
   }
 
-  // 🔹 MEDIUM (default) – for Shop page
+  // 🔹 DEFAULT (Home page, etc.) – larger layout
   return (
-    <motion.div whileHover={{ y: -3 }} className="card group relative bg-white rounded-xl shadow-sm hover:shadow-md transition border border-gray-100 overflow-hidden h-full">
+    <motion.div whileHover={{ y: -3 }} className="bg-white rounded-xl shadow-sm hover:shadow-md transition border border-gray-100 overflow-hidden h-full">
       <Link to={`/product/${product._id}`}>
-        <div className="relative overflow-hidden">
+        <div className="relative bg-gray-50">
           <img
             src={product.images?.[0] || 'https://via.placeholder.com/300'}
             alt={product.name}
-            className="w-full h-40 sm:h-52 object-cover group-hover:scale-105 transition duration-500"
+            className="w-full h-56 sm:h-64 object-cover group-hover:scale-105 transition duration-300"
           />
           <button
             onClick={handleWishlist}
-            className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow-md hover:shadow-lg transition"
+            className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow-sm hover:shadow-md transition"
           >
-            <FiHeart className={liked ? 'fill-red-500 text-red-500' : 'text-gray-500'} size={14} />
+            <FiHeart className={liked ? 'fill-red-500 text-red-500' : 'text-gray-500'} size={16} />
           </button>
           {product.discount && (
             <span className="absolute bottom-2 left-2 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded">
@@ -90,20 +90,20 @@ const ProductCard = ({ product, compact = false }) => {
             </span>
           )}
         </div>
-        <div className="p-2 md:p-3">
-          <h3 className="font-semibold text-xs sm:text-sm truncate">{product.name}</h3>
-          <p className="text-gray-500 text-[8px] sm:text-xs">{product.category?.name || ''}</p>
-          <div className="flex items-center justify-between mt-0.5">
-            <span className="text-sm sm:text-lg font-bold gold-text">₹{product.price}</span>
+        <div className="p-3 sm:p-4">
+          <h3 className="font-semibold text-sm sm:text-base truncate">{product.name}</h3>
+          <p className="text-gray-500 text-xs sm:text-sm truncate">{product.category?.name || ''}</p>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-base sm:text-lg font-bold gold-text">₹{product.price}</span>
             {product.oldPrice && (
-              <span className="text-gray-400 line-through text-[8px] sm:text-sm">₹{product.oldPrice}</span>
+              <span className="text-gray-400 line-through text-sm sm:text-base">₹{product.oldPrice}</span>
             )}
           </div>
           <button
             onClick={handleAddToCart}
-            className="mt-1.5 w-full bg-gold-500 text-white text-[10px] sm:text-sm py-1 sm:py-1.5 rounded hover:bg-gold-600 transition flex items-center justify-center gap-1"
+            className="mt-2 w-full bg-gold-500 text-white text-sm py-2 rounded-lg hover:bg-gold-600 transition flex items-center justify-center gap-2 font-medium"
           >
-            <FiShoppingBag size={12} /> Add to Cart
+            <FiShoppingBag size={16} /> Add to Cart
           </button>
         </div>
       </Link>
