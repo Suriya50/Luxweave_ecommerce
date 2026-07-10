@@ -86,7 +86,7 @@ const Footer = () => {
             <address className="not-italic text-gray-400 text-xs md:text-sm leading-relaxed">
               <p>KK Nagar, Chennai</p>
               <p>Tamil Nadu, India – 600078</p>
-              <p className="mt-3">📞 +91 98765 43210</p>
+              <p className="mt-3">📞 +91 7868943703</p>
               <p>✉️ support@luxweave.com</p>
             </address>
           </div>
