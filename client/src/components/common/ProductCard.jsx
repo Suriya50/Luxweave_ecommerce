@@ -24,7 +24,7 @@ const ProductCard = ({ product, compact = false }) => {
     addToCart(product._id);
   };
 
-  // 🔹 SUPER COMPACT MODE – even smaller (for Shop page)
+  // 🔹 Compact – small cards for dense grids (optional)
   if (compact) {
     return (
       <motion.div whileHover={{ y: -2 }} className="bg-white rounded-lg shadow-sm hover:shadow-md transition border border-gray-100 overflow-hidden h-full">
@@ -68,15 +68,15 @@ const ProductCard = ({ product, compact = false }) => {
     );
   }
 
-  // 🔹 DEFAULT (Home page, etc.) – larger layout
+  // 🔹 DEFAULT – Medium, clear, balanced
   return (
-    <motion.div whileHover={{ y: -3 }} className="bg-white rounded-xl shadow-sm hover:shadow-md transition border border-gray-100 overflow-hidden h-full">
+    <motion.div whileHover={{ y: -4 }} className="bg-white rounded-xl shadow-sm hover:shadow-md transition border border-gray-100 overflow-hidden h-full">
       <Link to={`/product/${product._id}`}>
         <div className="relative bg-gray-50">
           <img
             src={product.images?.[0] || 'https://via.placeholder.com/300'}
             alt={product.name}
-            className="w-full h-56 sm:h-64 object-cover group-hover:scale-105 transition duration-300"
+            className="w-full h-48 sm:h-56 object-cover group-hover:scale-105 transition duration-400"
           />
           <button
             onClick={handleWishlist}
@@ -85,7 +85,7 @@ const ProductCard = ({ product, compact = false }) => {
             <FiHeart className={liked ? 'fill-red-500 text-red-500' : 'text-gray-500'} size={16} />
           </button>
           {product.discount && (
-            <span className="absolute bottom-2 left-2 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded">
+            <span className="absolute bottom-2 left-2 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded">
               {product.discount}% OFF
             </span>
           )}
@@ -93,15 +93,15 @@ const ProductCard = ({ product, compact = false }) => {
         <div className="p-3 sm:p-4">
           <h3 className="font-semibold text-sm sm:text-base truncate">{product.name}</h3>
           <p className="text-gray-500 text-xs sm:text-sm truncate">{product.category?.name || ''}</p>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-base sm:text-lg font-bold gold-text">₹{product.price}</span>
+          <div className="flex items-center justify-between mt-1.5">
+            <span className="text-lg sm:text-xl font-bold gold-text">₹{product.price}</span>
             {product.oldPrice && (
-              <span className="text-gray-400 line-through text-sm sm:text-base">₹{product.oldPrice}</span>
+              <span className="text-gray-400 line-through text-xs sm:text-sm">₹{product.oldPrice}</span>
             )}
           </div>
           <button
             onClick={handleAddToCart}
-            className="mt-2 w-full bg-gold-500 text-white text-sm py-2 rounded-lg hover:bg-gold-600 transition flex items-center justify-center gap-2 font-medium"
+            className="mt-2.5 w-full bg-gold-500 text-white text-sm sm:text-base py-2 rounded-lg hover:bg-gold-600 transition flex items-center justify-center gap-2 font-medium"
           >
             <FiShoppingBag size={16} /> Add to Cart
           </button>
