@@ -549,7 +549,7 @@ const Shop = () => {
               <button onClick={clearFilters} className="btn-primary mt-3 text-sm px-4 py-1.5">Clear Filters</button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
               {products.map((product) => (
                 <motion.div
                   key={product._id}
@@ -558,7 +558,6 @@ const Shop = () => {
                   transition={{ duration: 0.3 }}
                   className="h-full"
                 >
-                  {/* ✅ Use the default medium card */}
                   <ProductCard product={product} compact={false} />
                 </motion.div>
               ))}

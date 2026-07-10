@@ -24,7 +24,7 @@ const ProductCard = ({ product, compact = false }) => {
     addToCart(product._id);
   };
 
-  // 🔹 Compact – small cards for dense grids (optional)
+  // 🔹 Compact (small) – for dense grids, not used in Shop
   if (compact) {
     return (
       <motion.div whileHover={{ y: -2 }} className="bg-white rounded-lg shadow-sm hover:shadow-md transition border border-gray-100 overflow-hidden h-full">
@@ -68,42 +68,44 @@ const ProductCard = ({ product, compact = false }) => {
     );
   }
 
-  // 🔹 DEFAULT – Medium, clear, balanced
+  // 🔹 DEFAULT – Large, gallery‑style image (for Shop page)
   return (
-    <motion.div whileHover={{ y: -4 }} className="bg-white rounded-xl shadow-sm hover:shadow-md transition border border-gray-100 overflow-hidden h-full">
+    <motion.div whileHover={{ y: -6 }} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition duration-300 border border-gray-100 overflow-hidden h-full group">
       <Link to={`/product/${product._id}`}>
-        <div className="relative bg-gray-50">
+        <div className="relative bg-gray-50 overflow-hidden">
           <img
-            src={product.images?.[0] || 'https://via.placeholder.com/300'}
+            src={product.images?.[0] || 'https://via.placeholder.com/400'}
             alt={product.name}
-            className="w-full h-48 sm:h-56 object-cover group-hover:scale-105 transition duration-400"
+            className="w-full h-64 sm:h-80 lg:h-96 object-cover group-hover:scale-105 transition duration-500"
           />
+          {/* Wishlist heart */}
           <button
             onClick={handleWishlist}
-            className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow-sm hover:shadow-md transition"
+            className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-md hover:shadow-lg transition"
           >
-            <FiHeart className={liked ? 'fill-red-500 text-red-500' : 'text-gray-500'} size={16} />
+            <FiHeart className={liked ? 'fill-red-500 text-red-500' : 'text-gray-600'} size={20} />
           </button>
+          {/* Discount badge */}
           {product.discount && (
-            <span className="absolute bottom-2 left-2 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded">
+            <span className="absolute bottom-3 left-3 bg-red-500 text-white text-xs px-2 py-1 rounded-full shadow">
               {product.discount}% OFF
             </span>
           )}
         </div>
-        <div className="p-3 sm:p-4">
-          <h3 className="font-semibold text-sm sm:text-base truncate">{product.name}</h3>
-          <p className="text-gray-500 text-xs sm:text-sm truncate">{product.category?.name || ''}</p>
-          <div className="flex items-center justify-between mt-1.5">
-            <span className="text-lg sm:text-xl font-bold gold-text">₹{product.price}</span>
+        <div className="p-4 sm:p-5">
+          <h3 className="font-semibold text-base sm:text-lg truncate">{product.name}</h3>
+          <p className="text-gray-500 text-sm sm:text-base truncate">{product.category?.name || ''}</p>
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-xl sm:text-2xl font-bold gold-text">₹{product.price}</span>
             {product.oldPrice && (
-              <span className="text-gray-400 line-through text-xs sm:text-sm">₹{product.oldPrice}</span>
+              <span className="text-gray-400 line-through text-sm sm:text-base">₹{product.oldPrice}</span>
             )}
           </div>
           <button
             onClick={handleAddToCart}
-            className="mt-2.5 w-full bg-gold-500 text-white text-sm sm:text-base py-2 rounded-lg hover:bg-gold-600 transition flex items-center justify-center gap-2 font-medium"
+            className="mt-3 w-full bg-gold-500 text-white text-sm sm:text-base py-2.5 rounded-xl hover:bg-gold-600 transition flex items-center justify-center gap-2 font-medium shadow-sm hover:shadow-md"
           >
-            <FiShoppingBag size={16} /> Add to Cart
+            <FiShoppingBag size={18} /> Add to Cart
           </button>
         </div>
       </Link>
