@@ -1,26 +1,18 @@
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 
-// ✅ Helper: Extract images and return absolute URLs
+// ✅ Helper: Extract uploaded image URLs (Cloudinary gives full URLs)
 const extractUploadedImages = (req) => {
   if (req.files && req.files.length > 0) {
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    return req.files.map(file => {
-      // If Cloudinary (starts with http), return as is
-      if (file.path && file.path.startsWith('http')) {
-        return file.path;
-      }
-      // Local storage: construct absolute URL
-      if (file.filename) {
-        return `${baseUrl}/uploads/${file.filename}`;
-      }
-      return file.path || file.secure_url || file.location;
-    });
+    return req.files.map(file => file.path || file.secure_url || file.location);
+  }
+  if (req.body.images && Array.isArray(req.body.images)) {
+    return req.body.images;
   }
   return [];
 };
 
-// Helper: safely parse JSON fields
+// Helper: safely parse JSON fields (sizes, colors, specs)
 const parseJSON = (str) => {
   if (!str) return undefined;
   try {
@@ -30,15 +22,15 @@ const parseJSON = (str) => {
   }
 };
 
-// @desc    Get all products with filters & pagination
+// ─── GET /api/products (with filters, pagination, search) ───
 const getProducts = async (req, res) => {
   try {
     const {
       category,
       brand,
       gender,
-      sizes,          // now we use 'sizes' (plural)
-      colors,         // now we use 'colors' (plural)
+      sizes,      // comma-separated string
+      colors,     // comma-separated string
       minPrice,
       maxPrice,
       rating,
@@ -51,45 +43,24 @@ const getProducts = async (req, res) => {
 
     const filter = {};
 
-    // Category
     if (category) filter.category = category;
-
-    // Brand (partial match)
     if (brand) filter.brand = { $regex: brand, $options: 'i' };
-
-    // Gender
     if (gender) filter.gender = gender;
-
-    // Sizes – support comma‑separated values
     if (sizes) {
       const sizeArray = sizes.split(',').filter(Boolean);
-      if (sizeArray.length > 0) {
-        filter.sizes = { $in: sizeArray };
-      }
+      if (sizeArray.length) filter.sizes = { $in: sizeArray };
     }
-
-    // Colors – support comma‑separated values
     if (colors) {
       const colorArray = colors.split(',').filter(Boolean);
-      if (colorArray.length > 0) {
-        filter.colors = { $in: colorArray };
-      }
+      if (colorArray.length) filter.colors = { $in: colorArray };
     }
-
-    // Price range
     if (minPrice || maxPrice) {
       filter.price = {};
       if (minPrice) filter.price.$gte = parseFloat(minPrice);
       if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
     }
-
-    // Rating
     if (rating) filter.rating = { $gte: parseFloat(rating) };
-
-    // Featured flag
     if (featured === 'true') filter.isFeatured = true;
-
-    // Search (name, description, brand)
     if (search) {
       filter.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -103,12 +74,10 @@ const getProducts = async (req, res) => {
     if (sort === 'priceAsc') sortOptions.price = 1;
     else if (sort === 'priceDesc') sortOptions.price = -1;
     else if (sort === 'popular') sortOptions.rating = -1;
-    else sortOptions.createdAt = -1; // newest
+    else sortOptions.createdAt = -1;
 
-    // Pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Execute query
     const [products, total] = await Promise.all([
       Product.find(filter)
         .populate('category')
@@ -132,7 +101,7 @@ const getProducts = async (req, res) => {
   }
 };
 
-// @desc    Get single product
+// ─── GET /api/products/:id ───
 const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id)
@@ -147,7 +116,7 @@ const getProductById = async (req, res) => {
   }
 };
 
-// @desc    Create product (admin)
+// ─── POST /api/products (admin) ───
 const createProduct = async (req, res) => {
   try {
     let images = extractUploadedImages(req);
@@ -157,7 +126,7 @@ const createProduct = async (req, res) => {
 
     const productData = { ...req.body };
 
-    // Parse JSON fields: sizes, colors, specifications (they come as strings from FormData)
+    // Parse JSON fields (sent as strings from FormData)
     if (typeof productData.sizes === 'string') {
       const parsed = parseJSON(productData.sizes);
       if (Array.isArray(parsed)) productData.sizes = parsed;
@@ -168,9 +137,12 @@ const createProduct = async (req, res) => {
     }
     if (typeof productData.specifications === 'string') {
       const parsed = parseJSON(productData.specifications);
-      if (typeof parsed === 'object' && parsed !== null) productData.specifications = parsed;
+      if (typeof parsed === 'object' && parsed !== null) {
+        productData.specifications = parsed;
+      }
     }
 
+    // If categoryName is sent instead of category ID
     if (productData.categoryName) {
       const category = await Category.findOne({ name: productData.categoryName });
       if (category) productData.category = category._id;
@@ -178,7 +150,7 @@ const createProduct = async (req, res) => {
     }
 
     productData.images = images;
-    delete productData.existingImages;
+    delete productData.existingImages; // not needed for creation
 
     const product = await Product.create(productData);
     res.status(201).json(product);
@@ -188,7 +160,7 @@ const createProduct = async (req, res) => {
   }
 };
 
-// @desc    Update product (admin)
+// ─── PUT /api/products/:id (admin) ───
 const updateProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -196,8 +168,10 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
+    // 1. Newly uploaded images (Cloudinary URLs)
     const newImages = extractUploadedImages(req);
 
+    // 2. Existing images from request (if user removed some)
     let existingImages = [];
     if (req.body.existingImages) {
       const parsed = parseJSON(req.body.existingImages);
@@ -206,12 +180,14 @@ const updateProduct = async (req, res) => {
       existingImages = product.images || [];
     }
 
+    // 3. Merge: keep existing + new
     const finalImages = [...existingImages, ...newImages];
 
     const updateData = { ...req.body };
     delete updateData.existingImages;
-    delete updateData.images;
+    delete updateData.images; // we'll set it from finalImages
 
+    // Parse JSON fields
     if (typeof updateData.sizes === 'string') {
       const parsed = parseJSON(updateData.sizes);
       if (Array.isArray(parsed)) updateData.sizes = parsed;
@@ -222,10 +198,13 @@ const updateProduct = async (req, res) => {
     }
     if (typeof updateData.specifications === 'string') {
       const parsed = parseJSON(updateData.specifications);
-      if (typeof parsed === 'object' && parsed !== null) updateData.specifications = parsed;
+      if (typeof parsed === 'object' && parsed !== null) {
+        updateData.specifications = parsed;
+      }
     }
 
     updateData.images = finalImages;
+
     Object.assign(product, updateData);
     await product.save();
 
@@ -236,7 +215,7 @@ const updateProduct = async (req, res) => {
   }
 };
 
-// @desc    Delete product (admin)
+// ─── DELETE /api/products/:id (admin) ───
 const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
