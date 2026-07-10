@@ -85,7 +85,7 @@ const Footer = () => {
             <h4 className="font-semibold text-base md:text-lg mb-3 gold-text">Visit Us</h4>
             <address className="not-italic text-gray-400 text-xs md:text-sm leading-relaxed">
               <p>KK Nagar, Chennai</p>
-              <p>Tamil Nadu, India – 600078</p>
+              <p>Tamil Nadu, India – 600079</p>
               <p className="mt-3">📞 +91 7868943703</p>
               <p>✉️ support@luxweave.com</p>
             </address>
