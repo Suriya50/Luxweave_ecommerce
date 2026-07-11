@@ -11,7 +11,7 @@ export const CartProvider = ({ children }) => {
   const fetchCart = async () => {
     try {
       const { data } = await api.get('/cart');
-      setCartItems(data);
+      setCartItems(data || []);
     } catch (error) {
       console.error('Cart fetch error:', error);
     } finally {
@@ -33,22 +33,22 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const updateItem = async (id, quantity) => {
+  const updateItem = async (cartItemId, quantity) => {
     try {
-      const { data } = await api.put(`/cart/${id}`, { quantity });
+      const { data } = await api.put(`/cart/${cartItemId}`, { quantity });
       setCartItems(data);
     } catch (error) {
       toast.error('Update failed');
     }
   };
 
-  const removeItem = async (id) => {
+  const removeItem = async (cartItemId) => {
     try {
-      const { data } = await api.delete(`/cart/${id}`);
+      const { data } = await api.delete(`/cart/${cartItemId}`);
       setCartItems(data);
       toast.success('Removed from cart');
     } catch (error) {
-      toast.error('Remove failed');
+      toast.error(error.response?.data?.message || 'Remove failed');
     }
   };
 
@@ -62,9 +62,15 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  // ✅ FIXED: Safe calculation with optional chaining
+  const totalItems = cartItems.reduce(
+    (sum, item) => sum + (item?.quantity || 0),
+    0
+  );
+
+  // ✅ FIXED: Safe calculation with optional chaining
   const totalPrice = cartItems.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
+    (sum, item) => sum + (item?.product?.price || 0) * (item?.quantity || 0),
     0
   );
 

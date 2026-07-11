@@ -24,6 +24,10 @@ const orderSchema = new mongoose.Schema(
       default: 'Pending',
     },
     paymentMethod: { type: String, default: 'COD' },
+    cancellationReason: { type: String, default: '' },
+    cancelledAt: { type: Date, default: null },
+    // ✅ FIX: Remove enum, just store string or null
+    cancelledBy: { type: String, default: null },
   },
   { timestamps: true }
 );
