@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef, memo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { getProducts, getCategories } from '../api/endpoints';
 import ProductCard from '../components/common/ProductCard';
@@ -6,7 +6,7 @@ import LoadingSkeleton from '../components/common/LoadingSkeleton';
 import { FiFilter, FiX, FiSearch } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Custom debounce hook
+// ─── Custom debounce hook ──────────────────────────────────────
 const useDebounce = (value, delay) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
   useEffect(() => {
@@ -16,6 +16,9 @@ const useDebounce = (value, delay) => {
   return debouncedValue;
 };
 
+// ─── Memoized ProductCard wrapper ─────────────────────────────
+const MemoizedProductCard = memo(ProductCard);
+
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
@@ -23,9 +26,17 @@ const Shop = () => {
   const [loading, setLoading] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
-  const debouncedSearch = useDebounce(searchQuery, 250);
+  const debouncedSearch = useDebounce(searchQuery, 200);
+  const isFirstRender = useRef(true);
 
-  // Filter state
+  // ─── Suggestions state ───────────────────────────────────────
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const suggestionsRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // ─── Filter state ─────────────────────────────────────────────
   const [filters, setFilters] = useState({
     category: searchParams.get('category') || '',
     brand: searchParams.get('brand') || '',
@@ -37,13 +48,13 @@ const Shop = () => {
     rating: searchParams.get('rating') || '',
     sort: searchParams.get('sort') || 'newest',
     page: parseInt(searchParams.get('page')) || 1,
-    limit: 12,
+    limit: 30,
     search: searchParams.get('search') || '',
   });
 
   const [pagination, setPagination] = useState({ total: 0, pages: 1 });
 
-  // Memoized options
+  // ─── Memoized options ─────────────────────────────────────────
   const sizeOptions = useMemo(() => ['S', 'M', 'L', 'XL', 'XXL'], []);
   const colorOptions = useMemo(() => ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Navy', 'Brown', 'Gray'], []);
   const genderOptions = useMemo(() => ['Men', 'Women', 'Unisex'], []);
@@ -67,11 +78,14 @@ const Shop = () => {
     { min: 5000, max: 10000, label: '₹5000 – ₹10000' },
   ], []);
 
-  // Memoized updateFilters
+  // ─── Update filters ───────────────────────────────────────────
   const updateFilters = useCallback((key, value) => {
     setFilters(prev => {
-      const newFilters = { ...prev, [key]: value, page: 1 };
-      // Update URL params
+      let newFilters = { ...prev, [key]: value };
+      // ✅ Only reset page if we are NOT updating the page
+      if (key !== 'page') {
+        newFilters.page = 1;
+      }
       const urlParams = { ...newFilters };
       Object.keys(urlParams).forEach(k => {
         if (urlParams[k] === '' || urlParams[k] === null || urlParams[k] === undefined) {
@@ -86,12 +100,16 @@ const Shop = () => {
     });
   }, [setSearchParams]);
 
-  // Update search filter when debouncedSearch changes
+  // ─── Update search only when debounced value changes ────────
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     updateFilters('search', debouncedSearch);
   }, [debouncedSearch, updateFilters]);
 
-  // Fetch products
+  // ─── Fetch products ──────────────────────────────────────────
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -113,6 +131,9 @@ const Shop = () => {
           }
         });
 
+        // Debug log to check page parameter
+        console.log('🔍 Fetching products with params:', params);
+
         const [productsRes, categoriesRes] = await Promise.all([
           getProducts(params),
           getCategories(),
@@ -129,6 +150,83 @@ const Shop = () => {
     fetchData();
   }, [filters]);
 
+  // ─── Fetch suggestions ──────────────────────────────────────
+  const fetchSuggestions = useCallback(async (query) => {
+    if (!query || query.trim().length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    try {
+      const { data } = await getProducts({ search: query, limit: 5 });
+      const items = data.products.map(p => ({
+        name: p.name,
+        brand: p.brand,
+        category: p.category?.name,
+        id: p._id,
+      }));
+      setSuggestions(items);
+      setShowSuggestions(items.length > 0);
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, []);
+
+  // ─── Debounced suggestions fetch ─────────────────────────────
+  const debouncedSuggestions = useDebounce(searchQuery, 150);
+
+  useEffect(() => {
+    if (debouncedSuggestions.trim().length >= 2) {
+      fetchSuggestions(debouncedSuggestions);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [debouncedSuggestions, fetchSuggestions]);
+
+  // ─── Handle suggestion click ─────────────────────────────────
+  const handleSuggestionClick = (suggestion) => {
+    setSearchQuery(suggestion.name);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    updateFilters('search', suggestion.name);
+    if (inputRef.current) inputRef.current.focus();
+  };
+
+  // ─── Close suggestions on outside click ─────────────────────
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // ─── Keyboard navigation ─────────────────────────────────────
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedSuggestionIndex(prev =>
+        prev < suggestions.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedSuggestionIndex(prev => (prev > 0 ? prev - 1 : -1));
+    } else if (e.key === 'Enter' && selectedSuggestionIndex >= 0) {
+      e.preventDefault();
+      const suggestion = suggestions[selectedSuggestionIndex];
+      if (suggestion) handleSuggestionClick(suggestion);
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      setSelectedSuggestionIndex(-1);
+    }
+  };
+
+  // ─── Toggle array filters ─────────────────────────────────────
   const toggleArrayFilter = useCallback((key, value) => {
     setFilters(prev => {
       const current = prev[key] || [];
@@ -167,10 +265,13 @@ const Shop = () => {
     });
     setSearchQuery('');
     setSearchParams({});
+    setSuggestions([]);
+    setShowSuggestions(false);
   }, [setSearchParams]);
 
   const handleSearchInputChange = useCallback((e) => {
     setSearchQuery(e.target.value);
+    setSelectedSuggestionIndex(-1);
   }, []);
 
   const applyPricePreset = useCallback((min, max) => {
@@ -178,22 +279,82 @@ const Shop = () => {
     updateFilters('maxPrice', max);
   }, [updateFilters]);
 
+  // ─── Clear search ─────────────────────────────────────────────
+  const clearSearch = useCallback(() => {
+    setSearchQuery('');
+    setShowSuggestions(false);
+    setSuggestions([]);
+    updateFilters('search', '');
+    if (inputRef.current) inputRef.current.focus();
+  }, [updateFilters]);
+
   if (loading) return <LoadingSkeleton />;
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
-      {/* Search Bar */}
-      <div className="mb-4 sm:mb-6">
+      {/* Search Bar with Suggestions & Clear Button */}
+      <div className="mb-4 sm:mb-6 relative" ref={suggestionsRef}>
         <form onSubmit={(e) => e.preventDefault()} className="flex max-w-2xl mx-auto">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={handleSearchInputChange}
-            placeholder="Search products..."
-            className="flex-1 border border-r-0 rounded-l-lg p-2 sm:p-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 transition-all duration-200"
-            autoComplete="off"
-            spellCheck="false"
-          />
+          <div className="relative flex-1">
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchInputChange}
+              onKeyDown={handleKeyDown}
+              onFocus={() => {
+                if (suggestions.length > 0) setShowSuggestions(true);
+              }}
+              placeholder="Search products..."
+              className="w-full border border-r-0 rounded-l-lg p-2 sm:p-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 transition-all duration-200 pr-8"
+              autoComplete="off"
+              spellCheck="false"
+            />
+            {/* Clear button (×) appears when there is text */}
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                aria-label="Clear search"
+              >
+                <FiX size={18} />
+              </button>
+            )}
+            {/* Suggestions Dropdown */}
+            <AnimatePresence>
+              {showSuggestions && suggestions.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  className="absolute left-0 right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-100 z-50 max-h-60 overflow-y-auto"
+                >
+                  {suggestions.map((item, index) => (
+                    <div
+                      key={item.id || index}
+                      className={`px-4 py-2 cursor-pointer hover:bg-gold-50 flex items-center gap-2 transition ${
+                        selectedSuggestionIndex === index ? 'bg-gold-50 border-l-2 border-gold-500' : ''
+                      }`}
+                      onClick={() => handleSuggestionClick(item)}
+                      onMouseEnter={() => setSelectedSuggestionIndex(index)}
+                    >
+                      <FiSearch className="text-gold-500 text-sm flex-shrink-0" />
+                      <div>
+                        <span className="text-sm font-medium">{item.name}</span>
+                        {item.brand && (
+                          <span className="text-xs text-gray-400 ml-2">{item.brand}</span>
+                        )}
+                        {item.category && (
+                          <span className="text-xs text-gray-400 ml-2">in {item.category}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           <button
             type="submit"
             className="bg-gold-500 text-white px-4 sm:px-6 rounded-r-lg hover:bg-gold-600 transition flex items-center gap-1 sm:gap-2 text-sm flex-shrink-0"
@@ -201,7 +362,7 @@ const Shop = () => {
             <FiSearch className="text-sm" /> <span className="hidden xs:inline">Search</span>
           </button>
         </form>
-        {searchQuery && (
+        {searchQuery && !showSuggestions && (
           <p className="text-xs text-gray-400 mt-1 text-center">
             Showing results for: <span className="text-gold-500 font-medium">"{searchQuery}"</span>
           </p>
@@ -267,6 +428,7 @@ const Shop = () => {
                 </div>
 
                 <div className="space-y-4 text-sm">
+                  {/* ... same filter fields as before ... */}
                   <div>
                     <label className="block font-medium text-xs mb-0.5">Category</label>
                     <select
@@ -406,6 +568,7 @@ const Shop = () => {
           </div>
 
           <div className="space-y-4 text-sm">
+            {/* ... same desktop filter fields as before ... */}
             <div>
               <label className="block font-medium text-xs text-gray-600 mb-0.5">Category</label>
               <select
@@ -558,22 +721,30 @@ const Shop = () => {
                   transition={{ duration: 0.3 }}
                   className="h-full"
                 >
-                  <ProductCard product={product} compact={false} />
+                  <MemoizedProductCard product={product} compact={false} />
                 </motion.div>
               ))}
             </div>
           )}
 
+          {/* ✅ Range display */}
+          {products.length > 0 && (
+            <p className="text-xs text-gray-400 text-center mt-4">
+              Showing {(filters.page - 1) * filters.limit + 1} – {Math.min(filters.page * filters.limit, pagination.total)} of {pagination.total} products
+            </p>
+          )}
+
+          {/* ✅ Pagination buttons */}
           {pagination.pages > 1 && (
             <div className="flex justify-center mt-6 gap-1.5 flex-wrap">
               {[...Array(pagination.pages)].map((_, i) => (
                 <button
                   key={i}
                   onClick={() => updateFilters('page', i + 1)}
-                  className={`px-3 py-1 text-sm rounded ${
+                  className={`px-3 py-1 text-sm rounded transition ${
                     filters.page === i + 1
-                      ? 'bg-gold-500 text-white'
-                      : 'bg-gray-200 hover:bg-gray-300'
+                      ? 'bg-gold-500 text-white shadow-sm'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                   }`}
                 >
                   {i + 1}
